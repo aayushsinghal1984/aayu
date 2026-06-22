@@ -27,18 +27,16 @@ jobs:
     secrets:
       TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
-#   fmt:
-
-#     needs: bootstrap-workspace
-
-#     uses: ./.github/workflows/terraform-fmt.yml
-
-#     with:
-#       working_directory: network/env/dev
+#  fmt:
+#
+#    needs: bootstrap-workspace
+#
+#    uses: ./.github/workflows/terraform-fmt.yml
+#
+#    with:
+#      working_directory: network/env/dev
 
   validate:
-
-    # needs: fmt
 
     uses: ./.github/workflows/terraform-validate.yml
 
@@ -56,9 +54,15 @@ jobs:
     with:
       working_directory: network/env/dev
 
-  terraform-test:
+  trivy:
 
     needs: tflint
+
+    uses: ./.github/workflows/trivy.yml
+
+  terraform-test:
+
+    needs: trivy
 
     uses: ./.github/workflows/terraform-test.yml
 
@@ -88,19 +92,26 @@ jobs:
 
     uses: ./.github/workflows/opa.yml
 
-  trivy:
+  manual-approval:
 
-    needs: plan
+    needs: opa
 
-    uses: ./.github/workflows/trivy.yml
+    runs-on: ubuntu-latest
+
+    environment: Manual-Approval-Task
+
+    steps:
+
+      - name: Waiting For Approval
+        run: echo "Manual approval completed"
 
   apply:
 
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' &&
+        github.ref == 'refs/heads/main'
 
     needs:
-      - opa
-      - trivy
+      - manual-approval
 
     uses: ./.github/workflows/terraform-apply.yml
 
