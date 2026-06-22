@@ -5,7 +5,7 @@ terraform {
     organization = "HCL-TERRA-TEAM"
 
     workspaces {
-      name = "containerised-workflow-dev"
+      name = "network-dev"
     }
   }
 
