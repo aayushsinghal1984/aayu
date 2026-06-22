@@ -27,7 +27,7 @@ jobs:
       id-token: write
       contents: read
 
-    environment: dev
+    # environment: dev
 
     container:
       image: ubuntu:latest
