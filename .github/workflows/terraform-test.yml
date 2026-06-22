@@ -1,0 +1,36 @@
+name: Terraform Test
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        required: true
+        type: string
+
+    secrets:
+      TF_API_TOKEN:
+        required: true
+
+jobs:
+
+  terraform-test:
+
+    runs-on: self-hosted
+
+    container:
+      image: hashicorp/terraform:1.13
+
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Init
+        working-directory: ${{ inputs.working_directory }}
+        run: terraform init -backend=false
+
+      - name: Terraform Test
+        working-directory: ${{ inputs.working_directory }}
+        run: terraform test

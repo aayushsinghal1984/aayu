@@ -1,0 +1,106 @@
+name: Terraform Pipeline
+
+on:
+
+  workflow_dispatch:
+
+  pull_request:
+
+  push:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+
+  bootstrap-workspace:
+
+    uses: ./.github/workflows/bootstrap-workspace.yml
+
+    with:
+      organization: HCL-TERRA-TEAM
+      workspace_name: network-dev
+
+    secrets:
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+
+#   fmt:
+
+#     needs: bootstrap-workspace
+
+#     uses: ./.github/workflows/terraform-fmt.yml
+
+#     with:
+#       working_directory: network/env/dev
+
+  validate:
+
+    # needs: fmt
+
+    uses: ./.github/workflows/terraform-validate.yml
+
+    with:
+      working_directory: network/env/dev
+
+    secrets: inherit
+
+  tflint:
+
+    needs: validate
+
+    uses: ./.github/workflows/tflint.yml
+
+    with:
+      working_directory: network/env/dev
+
+  terraform-test:
+
+    needs: tflint
+
+    uses: ./.github/workflows/terraform-test.yml
+
+    with:
+      working_directory: network/env/dev
+
+    secrets: inherit
+
+  plan:
+
+    needs: terraform-test
+
+    uses: ./.github/workflows/terraform-plan.yml
+
+    with:
+      working_directory: network/env/dev
+
+    secrets: inherit
+
+  opa:
+
+    needs: plan
+
+    uses: ./.github/workflows/opa.yml
+
+  trivy:
+
+    needs: plan
+
+    uses: ./.github/workflows/trivy.yml
+
+  apply:
+
+    if: github.ref == 'refs/heads/main'
+
+    needs:
+      - opa
+      - trivy
+
+    uses: ./.github/workflows/terraform-apply.yml
+
+    with:
+      working_directory: network/env/dev
+
+    secrets: inherit

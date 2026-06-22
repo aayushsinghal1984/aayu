@@ -1,0 +1,67 @@
+name: Terraform Plan
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        required: true
+        type: string
+
+    secrets:
+      TF_API_TOKEN:
+        required: true
+
+      AZURE_CLIENT_ID:
+        required: true
+
+      AZURE_TENANT_ID:
+        required: true
+
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+
+jobs:
+
+  plan:
+
+    runs-on: self-hosted
+
+    permissions:
+      id-token: write
+      contents: read
+
+    container:
+      image: hashicorp/terraform:1.13
+
+    env:
+      TF_TOKEN_app_terraform_io: ${{ secrets.TF_API_TOKEN }}
+
+    steps:
+
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Terraform Init
+        working-directory: ${{ inputs.working_directory }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ${{ inputs.working_directory }}
+        run: terraform plan -out=tfplan
+
+      - name: Plan Json
+        working-directory: ${{ inputs.working_directory }}
+        run: terraform show -json tfplan > tfplan.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: |
+            ${{ inputs.working_directory }}/tfplan
+            ${{ inputs.working_directory }}/tfplan.json
