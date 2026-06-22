@@ -1,0 +1,64 @@
+name: Terraform Cloud Workspace Bootstrap
+
+on:
+  workflow_call:
+    inputs:
+      organization:
+        required: true
+        type: string
+
+      workspace_name:
+        required: true
+        type: string
+
+      project_name:
+        required: false
+        type: string
+        default: "Default Project"
+
+    secrets:
+      TF_API_TOKEN:
+        required: true
+
+jobs:
+  create-workspace:
+    runs-on: self-hosted
+
+    steps:
+      - name: Create Terraform Cloud Workspace
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+          ORGANIZATION: ${{ inputs.organization }}
+          WORKSPACE_NAME: ${{ inputs.workspace_name }}
+        run: |
+          response=$(curl \
+            --silent \
+            --write-out "%{http_code}" \
+            --output response.json \
+            --request POST \
+            --header "Authorization: Bearer ${TF_API_TOKEN}" \
+            --header "Content-Type: application/vnd.api+json" \
+            https://app.terraform.io/api/v2/organizations/${ORGANIZATION}/workspaces \
+            --data @- <<EOF
+          {
+            "data": {
+              "type": "workspaces",
+              "attributes": {
+                "name": "${WORKSPACE_NAME}",
+                "execution-mode": "local"
+              }
+            }
+          }
+          EOF
+          )
+
+          if [ "$response" = "201" ]; then
+            echo "Workspace created successfully."
+            cat response.json
+          elif [ "$response" = "422" ]; then
+            echo "Workspace already exists."
+          else
+            echo "Unexpected error."
+            cat response.json
+            exit 1
+          fi
