@@ -1,0 +1,15 @@
+run-name: sample
+
+on: workflow_dispatch
+
+jobs:
+  validate:
+    runs-on: self-hosted
+
+    container:
+      image: hashicorp/terraform:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: terraform version
